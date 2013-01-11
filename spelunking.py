@@ -15,9 +15,11 @@ from pygments.formatters import HtmlFormatter
 
 app = flask.Flask(__name__)
 
+secret_souce = "?client_id=80690b45e37d126cf0b3&client_secret=1575880eac803128879b62c0e225b902393d1241"
+
 def get_json(url):
     try:
-        resp = urllib2.urlopen("https://api.github.com/" + url + "?client_id=80690b45e37d126cf0b3&client_secret=1575880eac803128879b62c0e225b902393d1241")
+        resp = urllib2.urlopen("https://api.github.com/" + url + secret_souce)
     except urllib2.HTTPError as e:
         flask.abort(e.code)
 
@@ -25,15 +27,15 @@ def get_json(url):
 
 def download_repo(owner, repo, ref="master"):
     try:
-        resp = urllib2.urlopen("https://api.github.com/repos/%s/%s/tarball/%s" % (owner, repo, ref))
+        resp = urllib2.urlopen("https://api.github.com/repos/%s/%s/tarball/%s%s" % (owner, repo, ref, secret_souce))
     except urllib2.HTTPError as e:
         flask.abort(e.code)
 
-    with tempfile.TemporaryFile() as temp:
+    with tempfile.NamedTemporaryFile(delete=False) as temp:
         shutil.copyfileobj(resp, temp)
 
-        with tarfile.open(temp, 'r:gz') as t:
-            f.extractall('source')
+    with tarfile.open(temp.name, 'r:gz') as t:
+        t.extractall('source')
 
 def get_latest(owner, repo, ref="master"):
     data = get_json("repos/%s/%s/git/refs/heads/%s" % (owner, repo, ref))
@@ -118,7 +120,7 @@ def profile(owner):
 
 @app.route("/")
 def home():
-    return "hello world"
+    return flask.send_file("templates/home.html", "text/html")
 
 if __name__ == '__main__':
     app.run(debug=True)
