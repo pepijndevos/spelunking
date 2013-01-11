@@ -8,6 +8,7 @@ import errno
 import os.path
 import shutil
 import tempfile
+import codecs
 
 from pygments import highlight
 from pygments.lexers import get_lexer_for_filename
@@ -62,7 +63,7 @@ def generate_html(owner, repo, rev, path):
             )
 
     lexer = get_lexer_for_filename(path)
-    with open(sourcepath, 'r') as inf:
+    with codecs.open(sourcepath, 'r', 'utf-8') as inf:
         source = inf.read();
 
     dirname = os.path.dirname(htmlpath);
