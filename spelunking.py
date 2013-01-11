@@ -1,11 +1,13 @@
 import flask
 import tarfile
-import urllib
+import urllib2
 import json
 import subprocess
 import os
 import errno
 import os.path
+import shutil
+import tempfile
 
 from pygments import highlight
 from pygments.lexers import get_lexer_for_filename
@@ -13,22 +15,36 @@ from pygments.formatters import HtmlFormatter
 
 app = flask.Flask(__name__)
 
+def get_json(url):
+    try:
+        resp = urllib2.urlopen("https://api.github.com/" + url + "?client_id=80690b45e37d126cf0b3&client_secret=1575880eac803128879b62c0e225b902393d1241")
+    except urllib2.HTTPError as e:
+        flask.abort(e.code)
+
+    return json.load(resp)
+
 def download_repo(owner, repo, ref="master"):
-    (temp, _) = urllib.urlretrieve("https://api.github.com/repos/%s/%s/tarball/%s" % (owner, repo, ref))
-    f = tarfile.open(temp, 'r:gz')
-    f.extractall('source')
+    try:
+        resp = urllib2.urlopen("https://api.github.com/repos/%s/%s/tarball/%s" % (owner, repo, ref))
+    except urllib2.HTTPError as e:
+        flask.abort(e.code)
+
+    with tempfile.TemporaryFile() as temp:
+        shutil.copyfileobj(resp, temp)
+
+        with tarfile.open(temp, 'r:gz') as t:
+            f.extractall('source')
 
 def get_latest(owner, repo, ref="master"):
-    resp = urllib.urlopen("https://api.github.com/repos/%s/%s/git/refs/heads/%s" % (owner, repo, ref))
-    data = json.load(resp)
+    data = get_json("repos/%s/%s/git/refs/heads/%s" % (owner, repo, ref))
     return data['object']['sha']
 
 def folder_name(owner, repo, rev):
     return "%s-%s-%s/" % (owner, repo, rev[:7])
 
 def generate_ctags(owner, repo, rev):
-    path = folder_name(owner, repo, rev)
-    subprocess.call(["ctags", "-o", "source/" + path + "tags", "-n", "-R", "source/" + path])
+    path = "source/" + folder_name(owner, repo, rev)
+    subprocess.call(["ctags", "-n", "-R", "."], cwd=path)
 
 def generate_html(owner, repo, rev, path):
     htmlpath = '/'.join(['static', owner, repo, rev, path])
@@ -40,7 +56,7 @@ def generate_html(owner, repo, rev, path):
             lineanchors='L',
             anchorlinenos=True,
             tagsfile="source/" + folder_name(owner, repo, rev) + "tags",
-            tagurlformat="",
+            tagurlformat='/'.join(['', owner, repo, rev, "%(path)s/%(fname)s%(fext)s"]),
             )
 
     lexer = get_lexer_for_filename(path)
@@ -59,30 +75,50 @@ def generate_html(owner, repo, rev, path):
     with open(htmlpath, 'w+') as outf:
         highlight(source, lexer, formatter, outf)
 
-@app.route("/")
-def home():
-    return "hello world"
-
 @app.route("/<owner>/<repo>/<rev>/")
+@app.route("/<owner>/<repo>/<rev>//<path:path>")
 @app.route("/<owner>/<repo>/<rev>/<path:path>")
 def repository(owner, repo, rev, path=""):
+    path = path.strip('/');
     fullpath = '/'.join([owner, repo, rev, path])
+    sourceroot = "source/" + folder_name(owner, repo, rev)
 
-    if not os.path.exists("source/" + folder_name(owner, repo, rev)):
+    if not os.path.exists(sourceroot):
         download_repo(owner, repo, rev)
         generate_ctags(owner, repo, rev)
+
+    sourcepath = sourceroot + path
+    if os.path.isdir(sourcepath):
+        return flask.render_template("list.html",
+                owner=owner,
+                repo=repo,
+                pages=[{"name": p, "href": p + "/"} for p in os.listdir(sourcepath)])
+
+    if not os.path.exists(sourceroot + path):
+        flask.abort(404)
 
     if not os.path.exists('static/' + fullpath):
         generate_html(owner, repo, rev, path)
 
-    with open('static/' + fullpath, 'r') as inf:
-        return inf.read();
+    return flask.send_file('static/' + fullpath, 'text/html')
 
 @app.route("/<owner>/<repo>/")
 def bare_repository(owner, repo):
     rev = get_latest(owner, repo)
     url = flask.url_for('repository', owner=owner, repo=repo, rev=rev)
     return flask.redirect(url)
+
+@app.route("/<owner>/")
+def profile(owner):
+    data = get_json("users/%s/repos" % owner)
+
+    return flask.render_template("list.html",
+            owner=owner,
+            pages=[{"name": item["name"], "href": "/" + item["full_name"]} for item in data])
+
+@app.route("/")
+def home():
+    return "hello world"
 
 if __name__ == '__main__':
     app.run(debug=True)

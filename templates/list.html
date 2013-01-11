@@ -1,0 +1,15 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html lang="en">
+<head>
+	<title>{{ owner }} {% if repo %} -- {{ repo }}{% endif %}</title>
+</head>
+<body>
+	<h1>{{ owner }}</h1>
+	{% if repo %}<h2>{{ repo }}</h2>{% endif %}
+    <ul id="navigation">
+    {% for item in pages %}
+        <li><a href="{{ item.href }}">{{ item.name }}</a></li>
+    {% endfor %}
+    </ul>
+</body>
+</html>
