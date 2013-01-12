@@ -9,12 +9,14 @@ import os.path
 import shutil
 import tempfile
 import codecs
+import logging
 
 from pygments import highlight
 from pygments.lexers import get_lexer_for_filename
 from pygments.formatters import HtmlFormatter
 
 app = flask.Flask(__name__)
+app.logger.addHandler(logging.FileHandler("flask.log"))
 
 secret_souce = "?client_id=80690b45e37d126cf0b3&client_secret=1575880eac803128879b62c0e225b902393d1241"
 
