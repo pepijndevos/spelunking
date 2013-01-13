@@ -82,9 +82,11 @@ def generate_html(owner, repo, rev, path):
             pass
         else:
             raise
-
-    with open(htmlpath, 'w+') as outf:
+    
+    fd, tmpath = tempfile.mkstemp(dir="static")
+    with os.fdopen(fd, 'w') as outf:
         highlight(source, lexer, formatter, outf)
+        os.rename(tmpath, htmlpath)
 
 @app.route("/<owner>/<repo>/<rev>/")
 @app.route("/<owner>/<repo>/<rev>//<path:path>")
