@@ -12,8 +12,9 @@ import codecs
 import threading
 
 from pygments import highlight
-from pygments.lexers import get_lexer_for_filename
+from pygments.lexers import get_lexer_for_filename, TextLexer
 from pygments.formatters import HtmlFormatter
+from pygments.util import ClassNotFound
 
 app = flask.Flask(__name__)
 
@@ -63,7 +64,11 @@ def generate_html(owner, repo, rev, path):
             tagurlformat='/'.join(['', owner, repo, rev, "%(path)s/%(fname)s%(fext)s"]),
             )
 
-    lexer = get_lexer_for_filename(path)
+    try:
+        lexer = get_lexer_for_filename(path)
+    except ClassNotFound:
+        lexer = TextLexer();
+
     with codecs.open(sourcepath, 'r', 'utf8') as inf:
         source = inf.read();
 
