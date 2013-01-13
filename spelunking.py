@@ -109,11 +109,15 @@ def repository(owner, repo, rev, path=""):
                 repo=repo,
                 pages=[{"name": p, "href": p + "/"} for p in os.listdir(sourcepath)])
 
-    if not os.path.exists(sourceroot + path):
+    if not os.path.exists(sourcepath):
         flask.abort(404)
 
     if not os.path.exists('static/' + fullpath):
-        generate_html(owner, repo, rev, path)
+        thread = threading.Thread(target=generate_html, args=(owner, repo, rev, path))
+        thread.start()
+        thread.join(1) # wait one second
+        if thread.isAlive():
+            return flask.send_file(sourcepath, 'text/plain')
 
     return flask.send_file('static/' + fullpath, 'text/html')
 
