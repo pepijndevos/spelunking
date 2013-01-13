@@ -37,10 +37,7 @@ def download_repo(owner, repo, ref="master"):
     except urllib2.HTTPError as e:
         flask.abort(e.code)
 
-    with tempfile.NamedTemporaryFile(delete=False) as temp:
-        shutil.copyfileobj(resp, temp)
-
-    with tarfile.open(temp.name, 'r:gz') as t:
+    with tarfile.open(None, 'r|gz', resp) as t:
         t.extractall('source')
 
 def get_latest(owner, repo, ref="master"):
