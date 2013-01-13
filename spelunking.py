@@ -31,7 +31,8 @@ def get_json(url):
 
     return json.load(resp)
 
-def download_repo(owner, repo, ref="master"):
+def download_repo(owner, repo, ref):
+    os.mkdir("source/" + folder_name(owner, repo, ref))
     try:
         resp = urllib2.urlopen("https://api.github.com/repos/%s/%s/tarball/%s%s" % (owner, repo, ref, secret_souce))
     except urllib2.HTTPError as e:
