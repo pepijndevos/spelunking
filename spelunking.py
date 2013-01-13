@@ -137,7 +137,7 @@ def profile(owner):
 
 @app.route("/")
 def home():
-    return flask.send_file("templates/home.html", "text/html")
+    return flask.render_template("home.html", load=', '.join(["%.2f" % l for l in os.getloadavg()]))
 
 if __name__ == '__main__':
     app.run(debug=True)
