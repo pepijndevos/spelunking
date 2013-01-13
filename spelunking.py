@@ -113,13 +113,10 @@ def repository(owner, repo, rev, path=""):
         flask.abort(404)
 
     if not os.path.exists('static/' + fullpath):
-        thread = threading.Thread(target=generate_html, args=(owner, repo, rev, path))
-        thread.start()
-        thread.join(5)
-        if thread.isAlive():
-            return flask.send_file(sourcepath, 'text/plain')
+        threading.Thread(target=generate_html, args=(owner, repo, rev, path)).start()
+        return flask.render_template("wait.html", owner=owner, repo=repo)
 
-    return flask.send_file('static/' + fullpath, 'text/html')
+    return flask.redirect(fullpath, 301)
 
 @app.route("/<owner>/<repo>/")
 def bare_repository(owner, repo):
