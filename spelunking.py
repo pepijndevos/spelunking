@@ -11,6 +11,7 @@ import tempfile
 import codecs
 import threading
 import logging
+import fcntl
 
 from pygments import highlight
 from pygments.lexers import get_lexer_for_filename, TextLexer
@@ -72,21 +73,28 @@ def generate_html(owner, repo, rev, path):
         lexer = TextLexer();
 
     with codecs.open(sourcepath, 'r', 'utf8') as inf:
+        try:
+            fcntl.flock(inf, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except IOError:
+            return
+
         source = inf.read();
 
-    dirname = os.path.dirname(htmlpath);
-    try:
-        os.makedirs(dirname)
-    except OSError as exc:
-        if exc.errno == errno.EEXIST and os.path.isdir(dirname):
-            pass
-        else:
-            raise
-    
-    fd, tmpath = tempfile.mkstemp(dir="static")
-    with os.fdopen(fd, 'w') as outf:
-        highlight(source, lexer, formatter, outf)
-        os.rename(tmpath, htmlpath)
+        dirname = os.path.dirname(htmlpath);
+        try:
+            os.makedirs(dirname)
+        except OSError as exc:
+            if exc.errno == errno.EEXIST and os.path.isdir(dirname):
+                pass
+            else:
+                raise
+        
+        fd, tmpath = tempfile.mkstemp(dir="static")
+        with os.fdopen(fd, 'w') as outf:
+            highlight(source, lexer, formatter, outf)
+            os.rename(tmpath, htmlpath)
+
+        fcntl.flock(inf, fcntl.LOCK_EX | fcntl.LOCK_NB)
 
 @app.route("/<owner>/<repo>/<rev>/")
 @app.route("/<owner>/<repo>/<rev>//<path:path>")
