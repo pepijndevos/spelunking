@@ -9,6 +9,7 @@ import os.path
 import shutil
 import tempfile
 import codecs
+import threading
 
 from pygments import highlight
 from pygments.lexers import get_lexer_for_filename
@@ -87,8 +88,12 @@ def repository(owner, repo, rev, path=""):
     sourceroot = "source/" + folder_name(owner, repo, rev)
 
     if not os.path.exists(sourceroot):
-        download_repo(owner, repo, rev)
-        generate_ctags(owner, repo, rev)
+        def prepare():
+            download_repo(owner, repo, rev)
+            generate_ctags(owner, repo, rev)
+
+        threading.Thread(target=prepare).start()
+        return flask.render_template("wait.html", owner=owner, repo=repo)
 
     sourcepath = sourceroot + path
     if os.path.isdir(sourcepath):
@@ -125,10 +130,3 @@ def home():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
-
-
-
-
-
