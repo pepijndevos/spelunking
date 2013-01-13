@@ -115,7 +115,7 @@ def repository(owner, repo, rev, path=""):
     if not os.path.exists('static/' + fullpath):
         thread = threading.Thread(target=generate_html, args=(owner, repo, rev, path))
         thread.start()
-        thread.join(1) # wait one second
+        thread.join(5)
         if thread.isAlive():
             return flask.send_file(sourcepath, 'text/plain')
 
